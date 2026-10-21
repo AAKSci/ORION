@@ -22,3 +22,16 @@ The script expects four CSV files. Set the two folder paths at the top of `v4ORA
 - `All_Subjects_DXSUM_22Mar2026.csv`: ADNI diagnostic summary table. Columns used: `PTID`, `VISCODE`, `DXPARK`, `DXOTHDEM`.
 
 If your files have different names, update the filenames in Step 2 of the script.
+## How to run
+1. Install packages: `pip install -r requirements.txt`
+2. Edit the folder paths at the top of `v4ORADPRED.py` to point to your ADNI files.
+3. Run the analysis: `python v4ORADPRED.py`. This trains the models and saves them to `ORION_v4_package/`. Nested cross-validation takes roughly 20–40 minutes.
+4. Launch the dashboard: `streamlit run neurobility_dashboard.py`
+
+A fixed random seed (42) is used throughout.
+
+## Citation
+If you use this code, please cite the accompanying manuscript (citation to be added on publication).
+
+## Acknowledgment
+Data used in the preparation of this work were obtained from the Alzheimer's Disease Neuroimaging Initiative (ADNI) database (adni.loni.usc.edu).
