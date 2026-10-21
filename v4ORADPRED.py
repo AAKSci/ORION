@@ -1,4 +1,4 @@
-# ============================================================
+
 # ORION V4 -- ALZHEIMERS DISEASE RISK MODEL
 # Author      : Amir Kelson
 # Version     : 4.0
@@ -12,10 +12,10 @@
 # STEP  = pipeline step number for reproducibility
 # FIX   = documented bug fix with reason
 # WHY   = explains a decision that might not be obvious
-# ============================================================
 
 
-# ── STEP 0: IMPORT LIBRARIES ────────────────────────────────
+
+#  STEP 0: IMPORT LIBRARIES
 
 import pandas as pd                          # W3REF: pandas -- for loading and manipulating tabular data (like Excel rows/columns)
 import numpy as np                           # W3REF: numpy  -- for fast math operations on arrays and handling missing values (NaN)
@@ -60,14 +60,14 @@ class LogisticRegression(_TrainOnlyImpute, _SkLR):
         return super().decision_function(self.impute(X))
 
 
-# ── STEP 1: DEFINE FILE PATHS ───────────────────────────────
+# STEP 1: DEFINE FILE PATHS 
 # WHY: Storing paths as variables means we only change them in one place if files move.
 
 original_path = '/Users/amirkelson/Downloads/'                          # Where main ADNI data lives
 new_path      = '/Users/amirkelson/Downloads/Add.Feat.clean.Ad.Dtaswp/' # Where supplemental feature files live
 
 
-# ── STEP 2: LOAD DATA ───────────────────────────────────────
+#  STEP 2: LOAD DATA
 # pd.read_csv() reads a CSV file into a DataFrame.
 # A DataFrame is like a spreadsheet: rows = patients, columns = variables.
 
@@ -81,7 +81,7 @@ print("Total rows loaded:", len(df))                         # len() counts rows
 print("MMSCORE non-null:", df['MMSCORE'].notna().sum())      # .notna() returns True where value exists, .sum() counts Trues
 
 
-# ── STEP 3: BUILD LONGITUDINAL COGNITIVE SLOPE ──────────────
+#  STEP 3: BUILD LONGITUDINAL COGNITIVE SLOPE
 # WHY: Cognitive slope (MMSE change over time) is a strong predictor.
 #      We calculate it by subtracting baseline MMSE from 12-month and 24-month MMSE.
 
@@ -121,7 +121,7 @@ print("cognitive_slope 12m non-null:", df_first['cognitive_slope'].notna().sum()
 print("cognitive_slope 24m non-null:", df_first['cognitive_slope_24'].notna().sum())
 
 
-# ── STEP 4: MERGE SUPPLEMENTAL FEATURES ─────────────────────
+# STEP 4: MERGE SUPPLEMENTAL FEATURES
 # Filter MoCA and FAQ to baseline visit only, then merge into main dataset
 
 moca_bl = moca_df[moca_df['VISCODE'] == 'bl'][['PTID', 'MOCA']].drop_duplicates('PTID').copy()
@@ -141,7 +141,7 @@ print("moca_score non-null:", df_first['moca_score'].notna().sum())
 print("iadl_score non-null:", df_first['iadl_score'].notna().sum())
 
 
-# ── STEP 5: DROP ROWS MISSING ESSENTIAL VARIABLES ───────────
+# STEP 5: DROP ROWS MISSING ESSENTIAL VARIABLES
 
 # WHY: We cannot impute age, gender, or APOE genotype -- these are non-negotiable inputs.
 #      Any patient missing these is unusable and must be excluded.
@@ -151,7 +151,7 @@ df_clean = df_first.dropna(subset=hard_required).copy()         # dropna(subset=
 print("STEP 5 -- Rows after hard drop:", len(df_clean))
 
 
-# ── STEP 6: FIX 1 -- EXCLUDE OTHER DEMENTIAS ────────────────
+#  STEP 6: FIX 1 -- EXCLUDE OTHER DEMENTIAS
 # FIX: Parkinson's disease dementia and other non-AD dementias were in the "Not AD" group,
 #      making the boundary between AD and controls artificially noisy.
 # WHY: If a Parkinson's patient looks like an AD patient on our features,
@@ -164,7 +164,7 @@ print("STEP 6 -- Rows after excluding other dementias:", len(df_clean))
 print("Patients excluded:", before_exclusion - len(df_clean))
 
 
-# ── STEP 7: IMPUTE MISSING VALUES ───────────────────────────
+#  STEP 7: IMPUTE MISSING VALUES 
 # Imputation = filling in missing values with a reasonable estimate.
 # WHY: Most ML models cannot handle NaN (missing) values -- they will crash or produce wrong results.
 #      median() is used (not mean) because it is not affected by extreme outliers.
@@ -175,7 +175,7 @@ df_clean['cognitive_slope_24'] = df_clean['cognitive_slope_24'].fillna(0)       
 # mode() returns the most common value -- used for categorical columns
 
 
-# ── STEP 8: FIX 2 -- MOCA REAL vs IMPUTED FLAG ──────────────
+#  STEP 8: FIX 2 -- MOCA REAL vs IMPUTED FLAG
 # FIX: MoCA was missing for many patients. Instead of just imputing,
 #      we add a binary flag column so the model knows which scores are real.
 # WHY: Imputed scores (median) carry no real information.
@@ -188,7 +188,7 @@ print("Patients with real MoCA scores:", df_clean['moca_real'].sum())
 print("Patients with imputed MoCA:    ", (df_clean['moca_real'] == 0).sum())
 
 
-# ── STEP 9: FEATURE ENGINEERING ─────────────────────────────
+#STEP 9: FEATURE ENGINEERING
 # Feature engineering = creating new columns from existing ones to capture relationships.
 
 df_clean = df_clean.rename(columns={'MMSCORE': 'mmse_score'})   # rename for clarity throughout the rest of the script
@@ -229,7 +229,7 @@ df_clean['AD_binary'] = np.where(
     np.nan)))                                              # ELSE -> unknown, exclude from model
 
 
-# ── STEP 10: FIX 3 -- INTERACTION TERMS (APOE4 MULTICOLLINEARITY FIX) ──
+#  STEP 10: FIX 3 -- INTERACTION TERMS (APOE4 MULTICOLLINEARITY FIX) 
 # FIX: Original code included APOE4_x_gender which caused APOE4 coefficient
 #      to appear protective (negative) when it should increase risk (positive).
 #      This is multicollinearity -- two features that are too correlated confuse the model.
@@ -245,7 +245,7 @@ df_clean['education_x_APOE4'] = df_clean['education_years'] * df_clean['APOE4'] 
 print("STEP 10 -- Interaction terms created (APOE4_x_gender excluded to fix multicollinearity)")
 
 
-# ── STEP 11: SAVE STRATIFIED SUBSETS ────────────────────────
+# ── STEP 11: SAVE STRATIFIED SUBSETS 
 # WHY: We will train separate models for male and female patients
 #      because AD risk factors (especially hormonal) differ by sex.
 
@@ -257,7 +257,7 @@ print("STEP 11 -- Male patients:  ", len(df_male))
 print("STEP 11 -- Female patients:", len(df_female))
 
 
-# ── STEP 12: DEFINE FEATURE LISTS ───────────────────────────
+# ── STEP 12: DEFINE FEATURE LISTS
 
 # Lists store multiple items in a single variable.
 # WHY: Two feature lists support the primary model (full features)
@@ -279,7 +279,7 @@ fallback_features = [                                  # No mmse_score, mmse_x_a
 ]
 
 
-# ── STEP 13: BUILD FINAL FEATURE MATRIX ─────────────────────
+# ── STEP 13: BUILD FINAL FEATURE MATRIX 
 # pd.concat() stacks DataFrames side by side (axis=1) or top to bottom
 
 X = pd.concat([df_clean[primary_features], hypertension], axis=1)  # X = feature matrix (inputs to model)
@@ -294,7 +294,7 @@ print("X shape:", X.shape)       # .shape returns (rows, columns) -- W3REF: http
 print("Y counts:\n", Y.value_counts())  # value_counts() shows how many patients have each diagnosis label
 
 
-# ── STEP 14: HYPERPARAMETER TUNING ──────────────────────────
+#  STEP 14: HYPERPARAMETER TUNING 
 # WHY: Random Forest has several settings (hyperparameters) that control how complex
 #      the model is. Without tuning, the default settings often cause overfitting.
 #      Overfitting = model memorizes training data but fails on new patients.
@@ -343,7 +343,7 @@ print(f"Best cross-validated AUC during tuning: {round(best_cv_auc, 3)}")
 print("NOTE: If best max_depth is None, try capping at 10 and compare AUC -- unlimited depth can overfit")
 
 
-# ── STEP 15: K-FOLD CROSS VALIDATION ────────────────────────
+# STEP 15: K-FOLD CROSS VALIDATION 
 # WHY: A single 80/20 train-test split can give misleading results if the split is lucky or unlucky.
 #      K-Fold solves this by splitting data into k groups, training on k-1 groups, testing on 1 group,
 #      and rotating through all combinations. You get k AUC scores instead of just 1.
@@ -453,7 +453,7 @@ rf_predicted = rf_tuned.predict(X_test)
 rf_proba     = rf_tuned.predict_proba(X_test)[:, 1]
 
 
-# ── STEP 17: FALLBACK MODEL (no MMSE required) ──────────────
+# ── STEP 17: FALLBACK MODEL (no MMSE required) 
 # WHY: Some patients in real clinical settings will not have MMSE on file.
 #      The fallback model uses only features available without MMSE.
 #      This makes ORION deployable in data-limited settings.
@@ -483,7 +483,7 @@ if len(Y_fb.unique()) >= 2:
     print(classification_report(Y_fb_test, fb_predicted, target_names=['Not AD', 'Alzheimers']))
 
 
-# ── STEP 18: STRATIFIED MODELS (male / female) ──────────────
+# ── STEP 18: STRATIFIED MODELS (male / female) 
 # WHY: Sex-stratified models allow us to report gender-specific AUC,
 #      which is important for equity in AI and for publication credibility.
 
@@ -527,7 +527,7 @@ print("\nSTEP 18 -- FEMALE MODEL")
 fpr_f, tpr_f, auc_f, rf_female = run_stratified_model(df_female, "Female")
 
 
-# ── STEP 19: FINAL PERFORMANCE REPORTS ──────────────────────
+# ── STEP 19: FINAL PERFORMANCE REPORTS 
 
 print("\nSTEP 19 -- LOGISTIC REGRESSION REPORT (test set)")
 print(classification_report(Y_test, lr_predicted, target_names=['Not AD', 'Alzheimers']))
@@ -543,7 +543,7 @@ print(classification_report(Y_test, rf_predicted, target_names=['Not AD', 'Alzhe
 print("Random Forest Test AUC:", round(auc_rf, 3))
 
 
-# ── STEP 20: PILOT STUDY STATISTICS ─────────────────────────
+# ── STEP 20: PILOT STUDY STATISTICS
 
 total_patients  = len(Y)
 ad_patients     = int(Y.sum())
@@ -564,10 +564,10 @@ df_clean.to_csv(original_path + 'Orion_adni_clean_v2.csv', index=False)
 print("\nSTEP 20 -- Done.", len(df_clean), "records saved to Orion_adni_clean_v2.csv")
 
 
-# ============================================================
+
 # STEP 21 — ORION V4 FULL VISUALIZATION SUITE
 # Saves ALL charts individually to Downloads
-# ============================================================
+
 
 import os
 import numpy as np
@@ -578,7 +578,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import subprocess
 import sys
 
-# ── ENSURE SHAP IS INSTALLED ────────────────────────────────
+# ── ENSURE SHAP IS INSTALLED
 try:
     import shap
 except ImportError:
@@ -586,7 +586,7 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "shap"])
     import shap
 
-# ── DEFINE SAVE PATH ────────────────────────────────────────
+# ── DEFINE SAVE PATH 
 original_path = "/Users/amirkelson/Downloads/"
 os.makedirs(original_path, exist_ok=True)
 
@@ -784,19 +784,19 @@ from pathlib import Path
 PACKAGE_DIR = Path(original_path) / "ORION_v4_package"
 PACKAGE_DIR.mkdir(exist_ok=True)
 
-# ── 22a: SAVE MODEL ARTIFACTS ───────────────────────────────
+# ── 22a: SAVE MODEL ARTIFACTS 
 with open(PACKAGE_DIR / "rf_tuned.pkl",   "wb") as f: pickle.dump(rf_tuned,   f)
 with open(PACKAGE_DIR / "rf_fallback.pkl","wb") as f: pickle.dump(rf_fallback, f)
 with open(PACKAGE_DIR / "logr.pkl",       "wb") as f: pickle.dump(logr,        f)
 with open(PACKAGE_DIR / "feature_columns.pkl", "wb") as f: pickle.dump(X.columns.tolist(), f)
 print("STEP 22a -- Model artifacts saved")
 
-# ── 22b: REQUIREMENTS FILE ──────────────────────────────────
+# ── 22b: REQUIREMENTS FIL
 (PACKAGE_DIR / "requirements.txt").write_text(
     "scikit-learn==1.4.2\npandas==2.2.2\nnumpy==1.26.4\nshap==0.45.0\nmatplotlib==3.8.4\npyyaml==6.0.1\n"
 )
 
-# ── 22c: MODEL INTERFACE FILE ───────────────────────────────
+# ── 22c: MODEL INTERFACE FILE 
 interface_code = '''
 import pickle
 from pathlib import Path
@@ -823,7 +823,7 @@ def load_model(model_file="rf_tuned.pkl"):
 '''
 (PACKAGE_DIR / "interface.py").write_text(interface_code)
 
-# ── 22d: METADATA YAML ──────────────────────────────────────
+# ── 22d: METADATA YAML
 metadata = {
     "name"        : "ORION v4 — Alzheimer's Disease Risk Model",
     "version"     : "4.0",
@@ -852,10 +852,10 @@ print("  rf_tuned.pkl | rf_fallback.pkl | logr.pkl | feature_columns.pkl")
 print("  interface.py | requirements.txt | metadata.yaml")
 
 
-# ============================================================
+
 # STEP 23 — GROUP-LEVEL RISK PROBABILITY REPORT
 # Every participant gets an AD risk score + risk tier
-# ============================================================
+
 
 risk_df = X.copy()
 risk_df['subject_id']       = df_clean.loc[mask, 'subject_id'].values
@@ -901,11 +901,11 @@ plt.show()
 print("Saved:", dist_path)
 
 
-# ============================================================
+
 # STEP 24 — PER-PARTICIPANT SHAP WATERFALL PLOTS
 # Shows each individual's contributing risk factors
 # Top 5 highest-risk + top 5 lowest-risk participants
-# ============================================================
+
 
 explainer_pkg  = shap.TreeExplainer(rf_tuned)
 shap_vals_full = explainer_pkg(rf_tuned.impute(X))   # SHAP Explanation object (new API)
@@ -954,11 +954,11 @@ print("\n=== ORION V4 PACKAGING COMPLETE ===")
 print(f"Package folder : {PACKAGE_DIR}")
 print(f"Risk CSV       : {risk_csv}")
 print(f"Waterfall plots: {waterfall_dir}")
-# ============================================================
+
 # STEP 25 -- SENSITIVITY MODELS
 # FIX 5: baseline_only  = no 12/24-month MMSE slopes (those use visits AFTER baseline)
 # FIX 6: non_cognitive  = no MMSE, MoCA or FAQ (those feed the ADNI diagnosis itself)
-# ============================================================
+
 print("\nSTEP 25 -- SENSITIVITY MODELS (nested CV + held-out test set)")
 sensitivity_sets = {
     'baseline_only': [f for f in primary_features if f not in ('cognitive_slope', 'cognitive_slope_24')],
@@ -981,11 +981,10 @@ for set_name, feats in sensitivity_sets.items():
     print(f"  RF nested CV AUC : {round(rf_nested.mean(),3)} +/- {round(rf_nested.std(),3)}   Test AUC: {round(rf_test,3)}")
     print(f"  LR 5-fold CV AUC : {round(lr_cv.mean(),3)} +/- {round(lr_cv.std(),3)}   Test AUC: {round(lr_test,3)}")
 
-# ============================================================
 # STEP 26 — GENERATE STREAMLIT CLINICIAN APP
 # Writes orion_app.py to your Downloads folder
 # Run it with: streamlit run ~/Downloads/orion_app.py
-# ============================================================
+#
 
 streamlit_code = '''
 import streamlit as st
@@ -1007,7 +1006,7 @@ class LogisticRegression(_TrainOnlyImpute, _SkLR):
     def decision_function(self, X):
         return super().decision_function(self.impute(X))
 
-# ── Load packaged model ──────────────────────────────────────
+# ── Load packaged model 
 PACKAGE = Path.home() / "Downloads" / "ORION_v4_package"
 
 @st.cache_resource
@@ -1019,13 +1018,13 @@ def load_artifacts():
 model, features = load_artifacts()
 explainer = shap.TreeExplainer(model)
 
-# ── Page config ──────────────────────────────────────────────
+# ── Page config
 st.set_page_config(page_title="ORION v4 — AD Risk", page_icon="🧠", layout="centered")
 st.title("🧠 ORION v4 — Alzheimer's Risk Predictor")
 st.caption("Research use only. Not for clinical diagnosis.")
 st.divider()
 
-# ── Patient input form ───────────────────────────────────────
+# ── Patient input form
 st.subheader("Enter Patient Details")
 
 col1, col2 = st.columns(2)
@@ -1048,7 +1047,7 @@ with col2:
 
 st.divider()
 
-# ── Parse inputs ─────────────────────────────────────────────
+# ── Parse inputs 
 gender_val     = 0 if "Male"   in gender    else 1
 apoe4_val      = 1 if "Yes"    in apoe4     else 0
 moca_real_val  = 1 if "Yes"    in moca_real else 0
@@ -1088,7 +1087,7 @@ for col in features:
         input_df[col] = 0
 input_df = input_df[features]
 
-# ── Predict ──────────────────────────────────────────────────
+# ── Predict 
 if st.button("Calculate AD Risk", type="primary", use_container_width=True):
 
     prob    = model.predict_proba(input_df)[0][1]
